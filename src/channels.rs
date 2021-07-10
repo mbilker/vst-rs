@@ -82,8 +82,8 @@ impl Into<api::ChannelProperties> for ChannelInfo {
 impl From<api::ChannelProperties> for ChannelInfo {
     fn from(api: api::ChannelProperties) -> ChannelInfo {
         ChannelInfo {
-            name: String::from_utf8_lossy(&api.name).to_string(),
-            short_name: String::from_utf8_lossy(&api.short_name).to_string(),
+            name: read_c_string(&api.name),
+            short_name: read_c_string(&api.short_name),
             active: api::ChannelFlags::from_bits(api.flags)
                 .expect("Invalid bits in channel info")
                 .intersects(api::ChannelFlags::ACTIVE),
@@ -349,4 +349,10 @@ impl From<api::ChannelProperties> for SpeakerArrangementType {
             Raw::Surround102 => Surround(S10_2),
         }
     }
+}
+
+fn read_c_string(data: &[u8]) -> String {
+    let len = data.iter().position(|&ch| ch == 0).unwrap_or_default();
+
+    String::from_utf8_lossy(&data[..len]).into_owned()
 }
