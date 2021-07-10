@@ -10,7 +10,7 @@ use std::mem::MaybeUninit;
 use std::os::raw::c_void;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use std::{fmt, ptr, slice};
+use std::{fmt, io, ptr, slice};
 
 use api::consts::*;
 use api::{self, AEffect, PluginFlags, PluginMain, Supported, TimeInfo};
@@ -244,10 +244,10 @@ pub trait Host {
 #[derive(Debug)]
 pub enum PluginLoadError {
     /// Could not load given path.
-    InvalidPath,
+    InvalidPlugin(io::Error),
 
     /// Given path is not a VST plugin.
-    NotAPlugin,
+    NotAPlugin(io::Error),
 
     /// Failed to create an instance of this plugin.
     ///
@@ -263,8 +263,8 @@ impl fmt::Display for PluginLoadError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::PluginLoadError::*;
         let description = match self {
-            InvalidPath => "Could not open the requested path",
-            NotAPlugin => "The given path does not contain a VST2.4 compatible library",
+            InvalidPlugin(_) => "Could not open the plugin at requested path",
+            NotAPlugin(_) => "The given path does not contain a VST2.4 compatible library",
             InstanceFailed => "Failed to create a plugin instance",
             InvalidApiVersion => "The plugin API version is not compatible with this library",
         };
@@ -272,7 +272,15 @@ impl fmt::Display for PluginLoadError {
     }
 }
 
-impl Error for PluginLoadError {}
+impl Error for PluginLoadError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            PluginLoadError::InvalidPlugin(e) => Some(e),
+            PluginLoadError::NotAPlugin(e) => Some(e),
+            _ => None,
+        }
+    }
+}
 
 /// Wrapper for an externally loaded VST plugin.
 ///
@@ -413,7 +421,7 @@ impl<T: Host> PluginLoader<T> {
         // Try loading the library at the given path
         let lib = match Library::new(path) {
             Ok(l) => l,
-            Err(_) => return Err(PluginLoadError::InvalidPath),
+            Err(e) => return Err(PluginLoadError::InvalidPlugin(e)),
         };
 
         Ok(PluginLoader {
@@ -421,7 +429,7 @@ impl<T: Host> PluginLoader<T> {
                 // Search the library for the VSTAPI entry point
                 match lib.get(b"VSTPluginMain") {
                     Ok(s) => *s,
-                    _ => return Err(PluginLoadError::NotAPlugin),
+                    Err(e) => return Err(PluginLoadError::NotAPlugin(e)),
                 }
             },
             lib: Arc::new(lib),
