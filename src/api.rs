@@ -268,7 +268,7 @@ pub enum SpeakerArrangementType {
 
 /// Used to specify whether functionality is supported.
 #[allow(missing_docs)]
-#[derive(PartialEq, Eq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Supported {
     Yes,
     Maybe,
@@ -406,6 +406,7 @@ pub struct FileSelect {
 }
 
 /// A struct which contains events.
+#[derive(Debug)]
 #[repr(C)]
 pub struct Events {
     /// Number of events.
@@ -513,8 +514,8 @@ pub enum EventType {
 /// // let event: *const Event = ...;
 /// let midi_event: &MidiEvent = unsafe { std::mem::transmute(event) };
 /// ```
+#[derive(Clone, Copy, Debug)]
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct Event {
     /// The type of event. This lets you know which event this object should be casted to.
     ///
