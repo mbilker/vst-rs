@@ -315,7 +315,7 @@ pub fn host_dispatch(
         OpCode::GetVendorString => return copy_string(ptr, &host.get_info().1, MAX_VENDOR_STR_LEN),
         OpCode::GetProductString => return copy_string(ptr, &host.get_info().2, MAX_PRODUCT_STR_LEN),
         OpCode::ProcessEvents => {
-            host.process_events(unsafe { &*(ptr as *const api::Events) });
+            host.process_events(unsafe { &*ptr.cast() })
         }
 
         OpCode::GetTime => {
@@ -327,13 +327,19 @@ pub fn host_dispatch(
                             Cell::new(TimeInfo::default());
                     }
                     TIME_INFO.with(|time_info| {
-                        (*time_info).set(result);
+                        time_info.set(result);
                         time_info.as_ptr() as isize
                     })
                 }
             };
         }
         OpCode::GetBlockSize => return host.get_block_size(),
+
+        OpCode::UpdateDisplay => host.update_display(),
+        OpCode::SizeWindow => {
+            host.size_window(index, value as i32);
+            return 1;
+        },
 
         unimplemented => {
             trace!("VST: Got unimplemented host opcode ({:?})", unimplemented);

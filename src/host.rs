@@ -238,6 +238,9 @@ pub trait Host {
     /// call, including `get_parameter`, `get_parameter_label`, `get_parameter_name`
     /// and `get_parameter_text`.
     fn update_display(&self) {}
+
+    /// Resize editor window
+    fn size_window(&self, width: i32, height: i32) {}
 }
 
 /// All possible errors that can occur when loading a VST plugin.
